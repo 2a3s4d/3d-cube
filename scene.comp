@@ -1,6 +1,5 @@
 #extension GL_OES_standard_derivatives : enable
 #define pi 3.1415926535
-#define n 3
 
 precision lowp float;
 
@@ -16,14 +15,6 @@ float dist3D(vec3 coordA, vec3 coordB) {
 	float xyDist = sqrt(pow(xDist, 2.0) + pow(yDist, 2.0));
 
 	return sqrt(pow(xyDist, 2.0) + pow(zDist, 2.0));
-}
-
-float avg (float numA, float numB) {
-	return ((numA + numB) / 2.0);
-}
-
-float avg3 (float numA, float numB, float numC) {
-	return ((numA + numB + numC) / 3.0);
 }
 
 float rnd (vec2 st) {
@@ -141,7 +132,7 @@ float inShade (vec3 point, vec4 lightSource, vec4 shape, float size) {
 		}
 
 	}
-	return lightSource.w * (3.0 / dist);
+	return clamp(lightSource.w * (3.0 / dist), 0.0, lightSource.w);
 }
 
 
@@ -151,7 +142,7 @@ float inShade (vec3 point, vec4 lightSource, vec4 shape, float size) {
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 //rotates on the center
-vec4 newCube (vec3 center, float size, float rot, vec3 rayPos, vec3 col, float steps) {
+vec3 newCube (vec3 center, float size, float rot, vec3 rayPos, vec3 col) {
 	vec3 c = center;
 	//vec3 cor1 = vec3(-1.0 * size * sin(rot) + c.x, -1.0 * size * cos(rot) + c.y, c.z);
 	//vec3 cor2 = vec3(size * cos(rot) + c.x, -1.0 * size * sin(rot) + c.y, c.z);
@@ -167,11 +158,11 @@ vec4 newCube (vec3 center, float size, float rot, vec3 rayPos, vec3 col, float s
 
 
 	if (inPolygonXZ(cor1, cor2, cor3, cor4, rayPos, rot) && inY) {
-		return vec4(col, 1.0);
+		return col;
 	}
 	
 	else {
-		return vec4(vec3(0.1), 1.0);
+		return vec3(0.1);
 	}
 }
 
@@ -207,7 +198,7 @@ vec4 box (vec3 cor, float size, float rot, vec3 rayPos, vec3 col, float steps) {
 
 
 // same as cube except the size in the y direction is fixed
-vec4 plane (vec3 center, float width, float height, float rot, vec3 rayPos, vec3 col, float steps) {
+vec3 plane (vec3 center, float width, float height, float rot, vec3 rayPos, vec3 col) {
 	vec3 c = center;
 	vec3 cor1 = vec3(-1.0 * height * sin(rot) + c.x, c.y, (-1.0 * width * cos(rot) + c.z)) ;
 	vec3 cor2 = vec3(height * cos(rot) + c.x,        c.y, (-1.0 * width * sin(rot) + c.z));
@@ -216,31 +207,31 @@ vec4 plane (vec3 center, float width, float height, float rot, vec3 rayPos, vec3
 
 	bool inY = rayPos.y > c.y - 0.005 && rayPos.y < c.y + 0.005;
 	if (inPolygonXZ(cor1, cor2, cor3, cor4, rayPos, rot) && inY) {
-		return vec4(col, 1.0);
+		return col;
 	}
 	
 	else {
-		return vec4(vec3(0.1), 1.0);
+		return vec3(0.1);
 	}
 }
 
-vec4 sphere (vec3 center, float radius, vec3 rayPos, vec3 col) {
+vec3 sphere (vec3 center, float radius, vec3 rayPos, vec3 col) {
 
 	bool inSphere = (dist3D(center, rayPos) <= radius); // if the ray is in the sphere
 
 	if (inSphere) {
-		return vec4(vec3(col), 1.0);
+		return vec3(col);
 	}
 
 	else {
-		return vec4(vec3(0.1), 1.0);
+		return vec3(0.1);
 	}
 }
 
 
 void main(void) {
 
-		float rxry = resolution.x / resolution.y;
+	float rxry = resolution.x / resolution.y;
 	vec2 st = gl_FragCoord.xy / resolution.xy;
 	st.x *= rxry;
 	
@@ -257,55 +248,43 @@ void main(void) {
 	
 	vec4 camPos = vec4(vec3(0.0, 2.0, -7.0), 0.0);
 	
-	vec4 light1 = vec4(vec3(-1.0, 2.0, 1.5), 1.0);
-	vec4 light2 = vec4(vec3(3.0, pow(sin(time), 2.0) - 0.4, -2.0), 3.0);
-	vec4 light3 = vec4(vec3(1.0, 1.3, 1.0), 1.0);
+	struct shape {
+		vec3 center;
+		float rotation;
+		float size;
+		vec3 colour;
+		float type;
+	};
+
+	shape boxC1 = shape(vec3(-1.5, 0.5, 0.0), pi / 4.0, 1.0, blue, 1.0);
+	shape boxC2 = shape(vec3(-1.5, 2.0, 0.0), pi / 4.0, 1.0, yellow, 1.0);
+	shape boxC3 = shape(vec3(0.0, 2.0, 0.0), pi / 4.0, 1.0, red, 1.0);
+	shape boxC4 = shape(vec3(1.5, 2.0, 0.0), pi / 4.0, 1.0, green, 1.0);
+	shape boxC5 = shape(vec3(1.5, 0.5, 0.0), 0.0, 1.0, yellow, 1.0);
+	shape planeC1 = shape(vec3(0.0, -0.5, 0.0), pi / 4.0, 50.0, red, 2.0);
 	
-	vec4 boxC1 = vec4(vec3(0.0, 0.5, 0.0), 0.0);
-	vec4 boxC2 = vec4(vec3(1.5, 0.0 ,-2.0), 0.0);
-	//vec4 boxCorner1 = vec4(vec3(0.0, 0.5, 3.0), 0.3); //x, y, z, rotation
+	shape sphereC1 = shape(vec3(-1.7, 0.0, -1.7), -1.0, 0.5, green, 3.0);
+	shape sphereC2 = shape(vec3(-0.4, -0.5, 0.0), -1.0, 0.6, white, 3.0);
 	
-	vec4 planeC1 = vec4(vec3(0.0, -0.5, 0.0), pi/ 4.0);
-	
-	vec4 sphereC1 = vec4(vec3(-1.7, 0.0, -1.7), -1.0);
-	vec4 sphereC2 = vec4(vec3(0.0, 2.0, 0.0), -1.0);
-	
-	const int numShapes = 8;
+	shape light1 = shape(vec3(-1.0, 3.2, 1.5), 1.0, 0.1, white, 3.0);
+	shape light2 = shape(vec3(2.5, -0.3, -1.2), 3.0, 0.1, white, 3.0);//
+	shape light3 = shape(vec3(1.0, 3.0, sin(time)), 1.0, 0.1, white, 3.0);
+
+	const int numShapes = 11;
 	const int numLights = 3;
 	
-	vec4 shape[numShapes];
-	shape[0] = boxC1;
-	shape[1] = boxC2;
-	shape[2] = planeC1;
-	shape[3] = sphereC1;
-	shape[4] = sphereC2;
-	shape[5] = light1;
-	shape[6] = light2;
-	shape[7] = light3;
-	
-	// 1 = box, 2 = plane, 3 = sphere
-	vec4 shapeInfo[numShapes]; // (colour, type)
-	shapeInfo[0] = vec4(blue, 1.0);
-	shapeInfo[1] = vec4(yellow, 1.0);
-	shapeInfo[2] = vec4(red, 2.0);
-	shapeInfo[3] = vec4(green, 3.0);
-	shapeInfo[4] = vec4(red, 3.0);
-	shapeInfo[5] = vec4(white, 3.0); // lights
-	shapeInfo[6] = vec4(white, 3.0);
-	shapeInfo[7] = vec4(white, 3.0);
-	
-	float shapeInfoCont[numShapes]; //size
-	shapeInfoCont[0] = (1.0);
-	shapeInfoCont[1] = (0.5);
-	shapeInfoCont[2] = (50.0);
-	shapeInfoCont[3] = (0.5);
-	shapeInfoCont[4] = (pow(cos(time), 2.0) + 0.2);
-	shapeInfoCont[5] = (0.1); // lights
-	shapeInfoCont[6] = (0.1);
-	shapeInfoCont[7] = (0.1);
-	
-	// different colours
-	
+	shape shapeList[numShapes];
+	shapeList[0] = boxC1;
+	shapeList[1] = boxC2;
+	shapeList[2] = boxC3;
+	shapeList[3] = boxC4;
+	shapeList[4] = boxC5;
+	shapeList[5] = planeC1;
+	shapeList[6] = sphereC1;
+	shapeList[7] = sphereC2;
+	shapeList[numShapes - 3] = light1;
+	shapeList[numShapes - 2] = light2;
+	shapeList[numShapes - 1] = light3;
 	
 	/////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////
@@ -320,19 +299,19 @@ void main(void) {
 		if (!inObj) {
 			rayPos = vec3(camPos.x + ((st.x - (rxry / 2.0)) * rayStepSize * i), camPos.y + ((st.y - 0.5) * rayStepSize * i), camPos.z + (rayStepSize * i));
 			for (int j = 0; j < numShapes; j++) {
-				if (shapeInfo[j].w == 1.0) {
-					vec4 box1 = newCube(shape[j].xyz, shapeInfoCont[j], shape[j].w, rayPos, shapeInfo[j].xyz, i);
-					col = max(box1.xyz * (box1.w), col);
+				if (shapeList[j].type == 1.0) {
+					vec3 box1 = newCube(shapeList[j].center, shapeList[j].size, shapeList[j].rotation, rayPos, shapeList[j].colour);
+					col = max(box1.xyz, col);
 				}
 				
-				else if (shapeInfo[j].w == 2.0) {
-					vec4 plane1 = plane(shape[j].xyz, shapeInfoCont[j], shapeInfoCont[j], shape[j].w, rayPos, shapeInfo[j].xyz, i);
-					col = max(plane1.xyz * (plane1.w), col);
+				else if (shapeList[j].type == 2.0) {
+					vec3 plane1 = plane(shapeList[j].center, shapeList[j].size, shapeList[j].size, shapeList[j].rotation, rayPos, shapeList[j].colour);
+					col = max(plane1.xyz, col);
 				}
 		
-				else if(shapeInfo[j].w == 3.0) {
-					vec4 sphere1 = sphere(shape[j].xyz, shapeInfoCont[j], rayPos, shapeInfo[j].xyz);
-					col = max(sphere1.xyz * sphere1.w, col);
+				else if(shapeList[j].type == 3.0) {
+					vec3 sphere1 = sphere(shapeList[j].center, shapeList[j].size, rayPos,  shapeList[j].colour);
+					col = max(sphere1.xyz, col);
 				}
 				
 			}
@@ -345,15 +324,15 @@ void main(void) {
 	
 	}
 	
-	
 	if (inObj) {
 		for (int i = numShapes - numLights; i < numShapes; i++) {
 			for (int j = 0; j < numShapes - numLights; j++) {
-				shadeMult += inShade(rayPos, shape[i], shape[j], shapeInfoCont[j]);
+				shadeMult += inShade(rayPos, vec4(shapeList[i].center, shapeList[i].rotation), vec4(shapeList[j].center, shapeList[j].rotation), shapeList[j].size);
 			}
 			shadeMult /= float(numShapes - numLights);
 		}
 	}
 	gl_FragColor = vec4(col * vec3(shadeMult), 1.0);
+
 
 }
